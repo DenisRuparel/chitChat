@@ -7,11 +7,14 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.util.Base64;
+import android.view.View;
 import android.widget.Toast;
 
 import com.denis.chitchat.adapters.RecentConversationsAdapter;
 import com.denis.chitchat.databinding.ActivityMainBinding;
+import com.denis.chitchat.listeners.ConversionListener;
 import com.denis.chitchat.models.ChatMessage;
+import com.denis.chitchat.models.User;
 import com.denis.chitchat.utilities.Constants;
 import com.denis.chitchat.utilities.PreferenceManager;
 import com.google.firebase.firestore.DocumentChange;
@@ -23,10 +26,11 @@ import com.google.firebase.firestore.QuerySnapshot;
 import com.google.firebase.messaging.FirebaseMessaging;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements ConversionListener {
 
     private ActivityMainBinding binding;
     private PreferenceManager preferenceManager;
@@ -44,11 +48,12 @@ public class MainActivity extends AppCompatActivity {
         loadUserDetails();
         getToken();
         setListeners();
+        listenConversations();
     }
 
     private void init(){
         conversations = new ArrayList<>();
-        conversationsAdapter = new RecentConversationsAdapter(conversations);
+        conversationsAdapter = new RecentConversationsAdapter(conversations, this);
         binding.conversationsRecyclerView.setAdapter(conversationsAdapter);
         database = FirebaseFirestore.getInstance();
     }
@@ -68,6 +73,15 @@ public class MainActivity extends AppCompatActivity {
 
     private void showToast(String message){
         Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
+    }
+
+    private void listenConversations(){
+        database.collection(Constants.KEY_COLLECTION_CONVERSATIONS)
+                .whereEqualTo(Constants.KEY_SENDER_ID, preferenceManager.getString(Constants.KEY_USER_ID))
+                .addSnapshotListener(eventListener);
+        database.collection(Constants.KEY_COLLECTION_CONVERSATIONS)
+                .whereEqualTo(Constants.KEY_RECEIVER_ID, preferenceManager.getString(Constants.KEY_USER_ID))
+                .addSnapshotListener(eventListener);
     }
 
     private final EventListener<QuerySnapshot> eventListener = (value, error) -> {
@@ -107,8 +121,11 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             }
-
-
+            Collections.sort(conversations, (obj1, obj2) -> obj2.dateObject.compareTo(obj1.dateObject));
+            conversationsAdapter.notifyDataSetChanged();
+            binding.conversationsRecyclerView.smoothScrollToPosition(0);
+            binding.conversationsRecyclerView.setVisibility(View.VISIBLE);
+            binding.progressBar.setVisibility(View.GONE);
         }
     };
 
@@ -142,5 +159,11 @@ public class MainActivity extends AppCompatActivity {
                     finish();
                 })
                 .addOnFailureListener(e -> showToast("Unable To Logout!"));
+    }
+
+    public void onConversionclicked(User user){
+        Intent intent = new Intent(getApplicationContext(), ChatActivity.class);
+        intent.putExtra(Constants.KEY_USER, user);
+        startActivity(intent);
     }
 }
