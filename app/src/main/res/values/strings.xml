@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">chitChat</string>
+    <string name="select_user">Select User</string>
+    <string name="login">Login</string>
+    <string name="welcome_back">Welcome Back!</string>
+    <string name="login_here">Login Here!</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="create_new_account">Create New Account</string>
+    <string name="message">Message</string>
+</resources>
